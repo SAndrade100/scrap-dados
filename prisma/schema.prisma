@@ -1,0 +1,556 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Roles {
+  ADMIN
+  CLIENTE
+  OPERADOR
+}
+
+model User {
+  id Int @id @default(autoincrement())
+
+  name     String
+  email    String
+  password String
+
+  role Roles? @default(CLIENTE)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+  deletedAt DateTime?
+
+  processos_responsavel Processos_Revistas_RPI[] @relation("ProcessoResponsavel")
+
+  @@index([id])
+  @@index([email])
+  @@map("users")
+}
+
+model Logs_Downloads_RPIs_Weekly {
+  id Int @id @default(autoincrement())
+
+  number  String
+  status  String
+  message String  @db.Text()
+  details String? @db.Text()
+
+  date DateTime
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+  deletedAt DateTime?
+
+  @@index([id])
+  @@index([number])
+  @@map("logs_downloads_rpis_weekly")
+}
+
+model Revistas_RPI {
+  id Int @id @default(autoincrement())
+
+  numero          String?
+  data_lancamento DateTime?
+  processos       Processos_Revistas_RPI[]
+  colidencias     Colidencias[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+  deletedAt DateTime?
+
+  @@index([id, numero, data_lancamento])
+  @@map("revistas_rpi")
+}
+
+model Processos_Revistas_RPI {
+  id Int @id @default(autoincrement())
+
+  numero                     String?
+  procurador                 String?   @db.Text()
+  data_deposito              DateTime?
+  data_concessao             DateTime?
+  data_vigencia              DateTime?
+  apostila                   String?   @db.Text()
+  imagem_marca               String?
+  natureza                   String?
+  apresentacao               String?
+  situacao                   String?
+  is_acompanhado_pela_bunker Boolean?  @default(false)
+  is_processo_de_terceiro    Boolean?  @default(false)
+
+  revista_rpi    Revistas_RPI? @relation(fields: [revista_rpi_id], references: [id])
+  revista_rpi_id Int?
+
+  despachos            Despachos_Processos_RPI[]
+  titulares            Titulares_Processos_RPI[]
+  marca                Marca_Processo_RPI[]
+  classes_nice         Classes_Nice_Processos_RPI[]
+  classes_vienna       Classes_Vienna_Processos_RPI[]
+  classe_nacional      Classe_Nacional_Processos_RPI[]
+  sobrestadores        Sobrestadores_Processos_RPI[]
+  prioridade_unionista Prioridade_Unionista_Processos_RPI[]
+  peticoes_processo    Peticoes_Processos_RPI[]
+  prazos               Prazos_Processos_RPI[]
+  envolvido            Envolvidos_Processos_RPI[]
+  anexos_processos     Anexos_Processos_RPI[]
+  ocorrencias          Ocorrencias_Processo_RPI[]
+  colidencias_base     Colidencias[] @relation("ProcessoBase")
+  colidencias_colidente Colidencias[] @relation("ProcessoColidente")
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+  deletedAt DateTime?
+
+  responsavel User? @relation("ProcessoResponsavel", fields: [responsavel_id], references: [id])
+  responsavel_id Int?
+
+  @@index([id, numero])
+  @@map("processos_revistas_rpi")
+}
+
+model Despachos_Processos_RPI {
+  id Int @id @default(autoincrement())
+
+  codigo             String? @db.Text()
+  nome               String? @db.Text()
+  texto_complementar String? @db.MediumText()
+
+  processo_rpi    Processos_Revistas_RPI? @relation(fields: [processo_rpi_id], references: [id])
+  processo_rpi_id Int?
+
+  protocolo_despacho Protocolos_Despachos_RPI[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+  deletedAt DateTime?
+
+  @@index([id])
+  @@map("despachos_processos_rpi")
+}
+
+model Protocolos_Despachos_RPI {
+  id Int @id @default(autoincrement())
+
+  numero         String?
+  data           DateTime?
+  codigo_servico String?
+  procurador     String?   @db.Text()
+  pais           String?   @db.VarChar(2)
+
+  despacho_protocolo_rpi     Despachos_Processos_RPI?      @relation(fields: [despacho_protocolo_rpi_id], references: [id])
+  despacho_protocolo_rpi_id  Int?
+  requerente_protocolo_rpi   Requerente_Protocolo_RPI[]
+  cedentes_protocolo_rpi     Cedentes_Protocolos_RPI[]
+  cessionarios_protocolo_rpi Cessionarios_Protocolos_RPI[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+  deletedAt DateTime?
+
+  @@index([id, numero])
+  @@map("protocolos_despachos_rpi")
+}
+
+model Requerente_Protocolo_RPI {
+  id Int @id @default(autoincrement())
+
+  nome_razao_social String? @db.Text()
+  pais              String? @db.VarChar(2)
+  uf                String? @db.VarChar(2)
+
+  protocolo_despacho_rpi    Protocolos_Despachos_RPI? @relation(fields: [protocolo_despacho_rpi_id], references: [id])
+  protocolo_despacho_rpi_id Int?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+  deletedAt DateTime?
+
+  @@index(id)
+  @@map("requerente_protocolo_rpi")
+}
+
+model Cedentes_Protocolos_RPI {
+  id Int @id @default(autoincrement())
+
+  nome_razao_social String? @db.Text()
+  pais              String? @db.VarChar(2)
+  uf                String? @db.VarChar(2)
+
+  protocolo_despacho_rpi    Protocolos_Despachos_RPI? @relation(fields: [protocolo_despacho_rpi_id], references: [id])
+  protocolo_despacho_rpi_id Int?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+  deletedAt DateTime?
+
+  @@index(id)
+  @@map("cedentes_protocolos_rpi")
+}
+
+model Cessionarios_Protocolos_RPI {
+  id Int @id @default(autoincrement())
+
+  nome_razao_social String? @db.Text()
+  pais              String? @db.VarChar(2)
+  uf                String? @db.VarChar(2)
+
+  protocolo_despacho_rpi    Protocolos_Despachos_RPI? @relation(fields: [protocolo_despacho_rpi_id], references: [id])
+  protocolo_despacho_rpi_id Int?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+  deletedAt DateTime?
+
+  @@index(id)
+  @@map("cessionarios_protocolos_rpi")
+}
+
+model Titulares_Processos_RPI {
+  id Int @id @default(autoincrement())
+
+  nome_razao_social String? @db.Text()
+  pais              String? @db.VarChar(2)
+  uf                String? @db.VarChar(2)
+
+  processo_rpi    Processos_Revistas_RPI? @relation(fields: [processo_rpi_id], references: [id])
+  processo_rpi_id Int?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+  deletedAt DateTime?
+
+  @@index(id)
+  @@map("titulares_processos_rpi")
+}
+
+model Classes_Nice_Processos_RPI {
+  id Int @id @default(autoincrement())
+
+  codigo        String? @db.Text()
+  status        String?
+  especificacao String? @db.MediumText()
+
+  processo_rpi    Processos_Revistas_RPI? @relation(fields: [processo_rpi_id], references: [id])
+  processo_rpi_id Int?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+  deletedAt DateTime?
+
+  @@index([id])
+  @@map("classes_nice_processo_rpi")
+}
+
+model Marca_Processo_RPI {
+  id Int @id @default(autoincrement())
+
+  apresentacao String?
+  natureza     String?
+  nome         String? @db.Text()
+
+  processo_rpi    Processos_Revistas_RPI? @relation(fields: [processo_rpi_id], references: [id])
+  processo_rpi_id Int?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+  deletedAt DateTime?
+
+  @@index(id)
+  @@map("marca_processo_rpi")
+}
+
+model Sobrestadores_Processos_RPI {
+  id Int @id @default(autoincrement())
+
+  processo String?
+  marca    String? @db.Text()
+
+  processo_rpi    Processos_Revistas_RPI? @relation(fields: [processo_rpi_id], references: [id])
+  processo_rpi_id Int?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+  deletedAt DateTime?
+
+  @@index([id, processo])
+  @@map("sobrestadores_processos_rpi")
+}
+
+model Classes_Vienna_Processos_RPI {
+  id Int @id @default(autoincrement())
+
+  codigo    String? @db.Text()
+  edicao    String? @db.Text()
+  descricao String? @db.Text()
+
+  processo_rpi    Processos_Revistas_RPI? @relation(fields: [processo_rpi_id], references: [id])
+  processo_rpi_id Int?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+  deletedAt DateTime?
+
+  @@index(id)
+  @@map("classes_vienna_processos_rpi")
+}
+
+model Classe_Nacional_Processos_RPI {
+  id Int @id @default(autoincrement())
+
+  codigo        String? @db.Text()
+  especificacao String? @db.MediumText()
+
+  processo_rpi    Processos_Revistas_RPI? @relation(fields: [processo_rpi_id], references: [id])
+  processo_rpi_id Int?
+
+  subclasses_nacional SubClasses_Nacional_Processsos_RPI[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+  deletedAt DateTime?
+
+  @@index(id)
+  @@map("classe_nacional_processos_rpi")
+}
+
+model SubClasses_Nacional_Processsos_RPI {
+  id Int @id @default(autoincrement())
+
+  codigo String? @db.Text()
+
+  classe_nacional    Classe_Nacional_Processos_RPI? @relation(fields: [classe_nacional_id], references: [id])
+  classe_nacional_id Int?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+  deletedAt DateTime?
+
+  @@index(id)
+  @@map("subclasses_nacional_processos_rpi")
+}
+
+model Prioridade_Unionista_Processos_RPI {
+  id Int @id @default(autoincrement())
+
+  data   DateTime?
+  numero String?
+  pais   String?   @db.VarChar(2)
+
+  processo_rpi    Processos_Revistas_RPI? @relation(fields: [processo_rpi_id], references: [id])
+  processo_rpi_id Int?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+  deletedAt DateTime?
+
+  @@index([id, numero])
+  @@map("prioridade_unionista_processos_rpi")
+}
+
+model Peticoes_Processos_RPI {
+  id Int @id @default(autoincrement())
+
+  numero_protocolo String?   @db.Text()
+  data             DateTime? @db.Date
+  imagem           String?
+  servico          Int?
+  cliente          String?   @db.Text()
+  delivery         String?
+  data_delivery    DateTime? @db.Date
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+  deletedAt DateTime?
+
+  pagamentos               Pagamentos_Peticoes_Processos_RPI[]
+  publicacoes_processo_rpi Publicacoes_Processos_RPI[]
+  processo_rpi             Processos_Revistas_RPI?             @relation(fields: [processo_rpi_id], references: [id])
+  processo_rpi_id          Int?
+
+  @@index([id])
+  @@map("peticoes_processos_rpi")
+}
+
+model Pagamentos_Peticoes_Processos_RPI {
+  id Int @id @default(autoincrement())
+
+  agencia_nome_banco String?
+  data               DateTime? @db.Date
+  valor              Float?
+
+  peticao_processo    Peticoes_Processos_RPI? @relation(fields: [peticao_processo_id], references: [id])
+  peticao_processo_id Int?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+  deletedAt DateTime?
+
+  @@index([id])
+  @@map("pagamentos_peticoes_processos_rpi")
+}
+
+model Prazos_Processos_RPI {
+  id Int @id @default(autoincrement())
+
+  data_inicio_prazo_ordinario      DateTime? @db.Date
+  data_fim_prazo_ordinario         DateTime? @db.Date
+  data_inicio_prazo_extraordinario DateTime? @db.Date
+  data_fim_prazo_extraordinario    DateTime? @db.Date
+
+  processo_rpi    Processos_Revistas_RPI? @relation(fields: [processo_rpi_id], references: [id])
+  processo_rpi_id Int?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+  deletedAt DateTime?
+
+  @@index([id])
+  @@map("prazos_processos_rpi")
+}
+
+model Publicacoes_Processos_RPI {
+  id Int @id @default(autoincrement())
+
+  numero_rpi            String?
+  data_rpi              DateTime? @db.Date
+  despacho              String?   @db.MediumText() //ALTERAÇÃO PARA FIX DO SCRAP
+  certificado           String?
+  inteiro_teor          String?
+  complementos_despacho String?   @db.MediumText()
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+  deletedAt DateTime?
+
+  peticao_processo_rpi    Peticoes_Processos_RPI? @relation(fields: [peticao_processo_rpi_id], references: [id])
+  peticao_processo_rpi_id Int?
+
+  @@index([id])
+  @@map("publicacoes_processos_rpi")
+}
+
+enum TIPO_ENVOLVIDO {
+  AGENTE
+  CLIENTE
+  OUTRA_PARTE
+  OUTROS
+  TERCEIRO
+}
+
+model Envolvidos {
+  id Int @id @default(autoincrement())
+
+  nome_identificacao  String?
+  tipo_envolvido      TIPO_ENVOLVIDO?
+  cadastro_externo    String?
+  inscricao_municipal String?
+  inscricao_estadual  String?
+  tipo_pessoa         String?
+  cpf_cnpj            String?
+
+  processos Envolvidos_Processos_RPI[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+  deletedAt DateTime?
+
+  @@index([id, cpf_cnpj, deletedAt])
+  @@map("envolvidos")
+}
+
+model Envolvidos_Processos_RPI {
+  id Int @id @default(autoincrement())
+
+  envolvido       Envolvidos?             @relation(fields: [envolvido_id], references: [id])
+  envolvido_id    Int?
+  processo_rpi    Processos_Revistas_RPI? @relation(fields: [processo_rpi_id], references: [id])
+  processo_rpi_id Int
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+  deletedAt DateTime?
+
+  @@index([id, envolvido_id, processo_rpi_id])
+  @@map("envolvidos_processos_rpi")
+}
+
+enum TipoAnexo {
+  LOGO
+  PETICAO_DO_INPI
+}
+
+model Anexos_Processos_RPI {
+  id Int @id @default(autoincrement())
+
+  nome_anexo String? @db.Text()
+  path String?
+  tipo TipoAnexo? 
+  descricao String? @db.Text()
+
+  processo_rpi Processos_Revistas_RPI? @relation(fields: [processo_rpi_id], references: [id])
+  processo_rpi_id Int?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+  deletedAt DateTime?
+
+  @@index([id, processo_rpi_id])
+  @@map("anexos_processos_rpi")
+}
+
+model Ocorrencias_Processo_RPI {
+  id             Int      @id @default(autoincrement())
+  processo_rpi   Processos_Revistas_RPI? @relation(fields: [processo_rpi_id], references: [id])
+  processo_rpi_id Int?
+  data           DateTime?
+  descricao      String?  @db.VarChar(255)
+  protocolo      String?  @db.VarChar(255)
+  detalhes       String?  @db.Text()
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  deletedAt      DateTime?
+}
+
+enum TipoColidencia {
+  APR //APRESENTAÇÃO
+  SUF // SUFIXO 
+  PRE // PREFIXO
+  RAD // RADICAL
+}
+
+model Colidencias {
+  id Int @id @default(autoincrement())
+  // Marca base
+  processo_base Processos_Revistas_RPI @relation("ProcessoBase", fields: [processo_base_id], references: [id])
+  processo_base_id Int 
+  elemento_base String? @db.Text()
+  // Marca colidida
+  processo_colidente Processos_Revistas_RPI @relation("ProcessoColidente", fields: [processo_colidente_id], references: [id])
+  processo_colidente_id Int 
+  elemento_colidido String? @db.Text()
+  // Detalhes da colidência
+  tipo_colidencia TipoColidencia
+  nivel_similaridade Float // 0 até 100
+  revista_rpi Revistas_RPI? @relation(fields: [revista_rpi_id], references: [id])
+  revista_rpi_id Int?
+  selecionada Boolean @default(false)
+  observacoes String? @db.Text()
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+  @@index([processo_base_id, processo_colidente_id])
+  @@index([revista_rpi_id])
+  @@map("colidencias")
+}
