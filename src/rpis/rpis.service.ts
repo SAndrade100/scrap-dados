@@ -12,6 +12,7 @@ import { LogsDownloadsRpisWeeklyService } from 'src/logs-downloads-rpis-weekly/l
 import * as moment from 'moment';
 import { PrismaService } from 'src/database/prisma.service';
 import { RPIsRepository } from './rpis.repository';
+import { uploadImageToDropbox } from '../utils/dropbox-upload';
 
 @Injectable()
 export class RpisService {
@@ -1649,16 +1650,10 @@ export class RpisService {
                     Cookie: cookieHeader,
                   },
                 });
-                const downloadImgPath = path.join(
-                  process.cwd(),
-                  `${process.env.UPLOADS_PATH}/images/marcas`,
-                );
-                if (!fs.existsSync(downloadImgPath)) {
-                  fs.mkdirSync(downloadImgPath, { recursive: true });
-                }
-                const imagePath = path.join(downloadImgPath, `${processNumber}.jpg`);
-                fs.writeFileSync(imagePath, response.data);
-                console.log(`Imagem salva em: ${imagePath}`);
+                // Enviar diretamente o buffer para o Dropbox sem salvar localmente
+                const fileName = `${processNumber}.jpg`;
+                await uploadImageToDropbox(response.data, fileName);
+                console.log(`Imagem enviada para o Dropbox: ${fileName}`);
               } catch (error) {
                 console.error('Erro ao baixar a imagem:', error.message);
               }
